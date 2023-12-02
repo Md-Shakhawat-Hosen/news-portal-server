@@ -1,0 +1,157 @@
+const express = require('express')
+const cors = require('cors')
+const app = express();
+require('dotenv').config()
+const port = process.env.port || 5000;
+
+//middleware
+
+app.use(cors());
+app.use(express.json());
+
+
+
+app.get('/',(req,res)=>{
+    res.send('newspaper server is running');
+})
+
+
+
+
+
+
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const uri =
+  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS_KEY}@cluster0.c3eejtp.mongodb.net/?retryWrites=true&w=majority`;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+async function run() {
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    // await client.connect();
+    const addArticlesCollection = client.db('newspaperDB').collection('addedArticles')
+     const usersCollection = client.db("newspaperDB").collection('users')
+
+    app.post('/users', async(req,res)=>{
+      const singleUser = req.body;
+      // console.log(singleUser)
+      const result = await usersCollection.insertOne(singleUser);
+      res.send(result);
+    })
+
+    app.post('/addArticles', async(req,res)=>{
+         const oneArticle = req.body;
+         const result = await addArticlesCollection.insertOne(oneArticle)
+         res.send(result)
+    })
+
+    app.get('/addArticles', async(req,res)=>{
+      const cursor = addArticlesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.patch('/addArticles/:id', async(req,res)=>{
+      const id = req.params.id;
+      const user = req.body;
+      // console.log(user);
+      // console.log(id);
+
+      const filter = { _id: new ObjectId(id) };
+      // console.log(filter)
+
+      if (user?.val == "approve") {
+        const updateDoc = {
+          $set: {
+            status:"approved"
+          },
+        };
+        const result = await addArticlesCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } else if (user?.val == "premium") {
+        const updateDoc = {
+          $set: {
+            isPremium: true
+          },
+        };
+        const result = await addArticlesCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+      else if (user?.val == "decline"){
+        const updateDoc = {
+          $set: {
+            isDecline: true
+          },
+        };
+        const result = await addArticlesCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    })
+
+    app.delete("/addArticles/:id", async(req,res)=>{
+      const id = req.params.id;
+      console.log(id);
+      const query = {_id: new ObjectId(id)};
+      const result = await addArticlesCollection.deleteOne(query);
+      res.send(result);
+    });
+
+
+    app.get('/users',async(req,res)=>{
+        // console.log(req.query.email);
+        let query = {};
+        if(req.query?.email){
+            query={email:req.query.email}
+        }
+
+        const result = await usersCollection.find(query).toArray();
+        res.send(result);
+    })
+
+
+    app.patch('/users', async(req,res)=>{
+      const user = req.body;
+      // console.log(user)
+
+      const filter = {email:user.email}
+      const updateDoc = {
+        $set:{
+          role: 'admin'
+        }
+      }
+
+      const result = await usersCollection.updateOne(filter,updateDoc);
+      res.send(result)
+    })
+
+
+
+
+
+
+
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
+  } finally {
+    // Ensures that the client will close when you finish/error
+    // await client.close();
+  }
+}
+run().catch(console.dir);
+
+
+
+app.listen(port, ()=>{
+    console.log(`newspaper server is running on port: ${port}`)
+})
