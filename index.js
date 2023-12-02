@@ -39,6 +39,7 @@ async function run() {
     // await client.connect();
     const addArticlesCollection = client.db('newspaperDB').collection('addedArticles')
      const usersCollection = client.db("newspaperDB").collection('users')
+     const publisherCollection = client.db("newspaperDB").collection('publishers')
 
     app.post('/users', async(req,res)=>{
       const singleUser = req.body;
@@ -56,6 +57,27 @@ async function run() {
     app.get('/addArticles', async(req,res)=>{
       const cursor = addArticlesCollection.find();
       const result = await cursor.toArray();
+      res.send(result);
+     
+    })
+
+    app.put('/addArticles/:id', async(req,res)=>{
+      const id = req.params.id;
+      const updatedArticles = req.body;
+
+      // console.log(id)
+      // console.log(updatedArticles);
+      const filter = {_id: new ObjectId(id)}
+      const options = {
+        upsert: true
+      }
+      const myArticles = {
+        $set: {
+          ...updatedArticles
+        }
+      }
+      const result = await addArticlesCollection.updateOne(filter,myArticles,options);
+
       res.send(result);
     })
 
@@ -88,7 +110,10 @@ async function run() {
       else if (user?.val == "decline"){
         const updateDoc = {
           $set: {
-            isDecline: true
+            isDecline: true,
+            declineReason: user?.reason,
+            status: "decline",
+            isPremium: false,
           },
         };
         const result = await addArticlesCollection.updateOne(filter, updateDoc);
@@ -98,7 +123,7 @@ async function run() {
 
     app.delete("/addArticles/:id", async(req,res)=>{
       const id = req.params.id;
-      console.log(id);
+      // console.log(id);
       const query = {_id: new ObjectId(id)};
       const result = await addArticlesCollection.deleteOne(query);
       res.send(result);
@@ -130,6 +155,21 @@ async function run() {
 
       const result = await usersCollection.updateOne(filter,updateDoc);
       res.send(result)
+    })
+
+
+    app.post('/addPublisher', async(req,res)=>{
+           const onePublisher = req.body;
+           console.log(onePublisher)
+           const result = await publisherCollection.insertOne(onePublisher);
+           res.send(result);
+    })
+
+
+    app.get('/addPublisher', async(req,res)=>{
+      const cursor = publisherCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
     })
 
 
