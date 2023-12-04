@@ -1,13 +1,27 @@
 const express = require('express')
-const cors = require('cors')
 const app = express();
+const cors = require('cors')
+
 require('dotenv').config()
+
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.port || 5000;
 
 //middleware
 
 app.use(cors());
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://newspaper-a-12-client.web.app",
+      "https://newspaper-a-12-client.firebaseapp.com",
+    ],
+    credentials: true,
+  })
+);
 
 
 
@@ -20,7 +34,6 @@ app.get('/',(req,res)=>{
 
 
 
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri =
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS_KEY}@cluster0.c3eejtp.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -55,10 +68,29 @@ async function run() {
     })
 
     app.get('/addArticles', async(req,res)=>{
-      const cursor = addArticlesCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-     
+        const cursor = addArticlesCollection.find();
+        const result = await cursor.toArray();
+        res.send(result);
+
+
+      // if (req.query?.limit && req.query?.offset) {
+      //      const limit = parseInt(req.query.limit) || 10;
+      //      const offset = parseInt(req.query.offset) || 0;
+      //      console.log(limit);
+      //      console.log(offset);
+      //          const cursor = addArticlesCollection.find();
+      //          const resultArray = await cursor.toArray();
+      //          const paginatedArticles = resultArray.slice(
+      //            offset,
+      //            offset + limit
+      //          );
+      //          res.json(paginatedArticles);
+      // }
+      // else {
+      //   const cursor = addArticlesCollection.find();
+      //   const result = await cursor.toArray();
+      //   res.send(result);
+      // }
     })
 
     app.put('/addArticles/:id', async(req,res)=>{
@@ -146,21 +178,36 @@ async function run() {
       const user = req.body;
       // console.log(user)
 
-      const filter = {email:user.email}
-      const updateDoc = {
-        $set:{
-          role: 'admin'
+      if (user.isUpdate){
+        const filter = { email: user.email };
+        const updateDoc = {
+          $set: {
+            photo: user.photo,
+            name: user.name,
+          },
+        };
+
+        const result = await usersCollection.updateOne(filter,updateDoc);
+        res.send(result)
+      }
+      else {
+        const filter = {email:user.email}
+        const updateDoc = {
+          $set:{
+            role: 'admin'
+          }
         }
+        const result = await usersCollection.updateOne(filter,updateDoc);
+        res.send(result)
       }
 
-      const result = await usersCollection.updateOne(filter,updateDoc);
-      res.send(result)
+     
     })
 
 
     app.post('/addPublisher', async(req,res)=>{
            const onePublisher = req.body;
-           console.log(onePublisher)
+          //  console.log(onePublisher)
            const result = await publisherCollection.insertOne(onePublisher);
            res.send(result);
     })
